@@ -1,0 +1,34 @@
+volumes:
+  neo4j_data:
+
+networks:
+  app_network:
+    driver: bridge
+
+services:
+  neon-neo4j:
+    image: neo4j:latest
+    container_name: neo4j-db-10
+    restart: always
+    environment:
+      - NEO4J_AUTH=${NEO4J_USERNAME}/${NEO4J_PASSWORD}
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j_data:/data
+    networks:
+      - app_network
+
+  backend:
+    build: ./backend
+    container_name: express_backend
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "${EXPRESS_PORT}:3000"
+    depends_on:
+      - neon-neo4j
+    networks:
+      - app_network
