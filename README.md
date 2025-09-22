@@ -30,7 +30,7 @@ CREATE (m:Movie {
 crear nodos
 
 ```neon4j
-LOAD CSV WITH HEADERS FROM 'file:///AllMoviesDetails_fixed.csv' AS row
+LOAD CSV WITH HEADERS FROM 'file:///AllMoviesDetails_w.csv' AS row
 FIELDTERMINATOR ';'
 WITH row, split(row.production_companies, "|") AS companies
 MATCH (m:Movie {id: toInteger(row.id)})
