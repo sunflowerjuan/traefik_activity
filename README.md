@@ -1,91 +1,37 @@
-# TALLER DOCKER COMPOSE
+# TALLER TRAEFIK
 
-## DOCKER COMPOSE SIN DECLARAR REDES
+Query para los datos
 
-Tenemos el docker compose donde declaramos los dos servicios, y modificamos el archivo [docker-compose.yml](docker-compose.yml) utilizando la red bridge sin declarar una red como tal
+Cargar peliculas
 
-![Docker Compose sin declarar redes](img/docker-compose_1.png)
-
-Subimos nuestros servicios nuevamente con el nuevo archivo docker-compose e intentaremos conectarnos a la base de datos con nuestra API, para esto utilizaremos el metodo post que creamos para agregar un registro a la tabla Movie de la siguiente manera
-
-```bash
-curl -X POST http://localhost:3000/movies \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": 99999,
-    "title": "The Montecarlo Experiment",
-    "original_title": "The Montecarlo Experiment",
-    "overview": "Un experimento que sale mal.",
-    "original_language": "en",
-    "release_date": "15/09/2025",
-    "runtime": 120,
-    "status": "Released",
-    "budget": 1000000,
-    "revenue": 5000000,
-    "popularity": 12.34,
-    "vote_average": 8.7,
-    "vote_count": 1500
-  }'
+```neon4j
+LOAD CSV WITH HEADERS FROM 'file:///AllMoviesDetails_fixed.csv' AS row
+FIELDTERMINATOR ';'
+CREATE (m:Movie {
+  id: toInteger(row.id),
+  title: row.title,
+  original_title: row.original_title,
+  overview: row.overview,
+  original_language: row.original_language,
+  release_date: row.release_date,
+  runtime: coalesce(toInteger(row.runtime), 0),
+  status: row.status,
+  budget: coalesce(toInteger(row.budget), 0),
+  revenue: coalesce(toInteger(row.revenue), 0),
+  popularity: coalesce(toFloat(row.popularity), 0.0),
+  vote_average: coalesce(toFloat(row.vote_average), 0.0),
+  vote_count: coalesce(toInteger(row.vote_count), 0)
+});
 ```
 
-Esta es la salida de nuestra peticion POST
+crear nodos
 
-![peticion POST sin declarar redes](img/post-1.png)
-
-nos muestra un error de conexion con el servidor, ya que no puede identificar el nombre del servicio
-
-## DOCKER COMPOSE DECLARANDO REDES
-
-Ahora, Subiremos nuestros servicios nuevamente con una modificacion a nuestro archivo docker-compose e intentaremos conectarnos a la base de datos con nuestra API pero esta vez declararemos una red llamada **user-defined**, configuraremos ambos servicios en esta red. asi quedaria el archivo [docker-compose.yml](docker-compose.yml)
-
-![Docker Compose declarar redes](img/docker-compose_2.png)
-
-y utilizaremos nuevamente el metodo post que creamos para agregar un registro a la tabla Movie de la siguiente manera:
-
-```bash
-curl -X POST http://localhost:3000/movies \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": 99998,
-    "title": "Perfect Blue",
-    "original_title": "Perfect Blue",
-    "overview": " follows Mima, a pop star who quits singing to become an actress but is stalked by a fan and haunted by her past as a pop idol.",
-    "original_language": "jap",
-    "release_date": "05/03/1997",
-    "runtime": 90,
-    "status": "Released",
-    "budget": 1000000,
-    "revenue": 5000000,
-    "popularity": 12.34,
-    "vote_average": 8.7,
-    "vote_count": 1500
-  }'
+```neon4j
+LOAD CSV WITH HEADERS FROM 'file:///AllMoviesDetails_fixed.csv' AS row
+FIELDTERMINATOR ';'
+WITH row, split(row.production_companies, "|") AS companies
+MATCH (m:Movie {id: toInteger(row.id)})
+UNWIND companies AS companyName
+MERGE (pc:ProductionCompany {name: companyName})
+MERGE (m)-[:PRODUCED_BY]->(pc);
 ```
-
-Esta es la salida de nuestra peticion POST
-
-![POST declarar redes](img/post-2.png)
-
-Estos son los logs que muestra nuestra API
-
-![LOGS sin declarar redes](img/logs-2.png)
-
-Verificamos la existencia de nuestra nueva pelicula en la base de datos mediante la siguiente consulta:
-
-```bash
-MATCH (m:Movie {id: 99998})
-RETURN m;
-```
-
-![consulta declarar redes](img/query-2.png)
-
-## Conclusion
-
-Definir una red resulta más práctica y recomendable para proyectos distribuidos que la red bridge por defecto.
-
-Para empezar, con esto podemos asegurar que cada proyecto puede tener su propia red aislada, Automatizando este proceso y evitando conflictos de conexiones indeseadas entre contenedores de distintos proyectos. De igual manera, Docker se asegura de asignar automáticamente un DNS interno donde los contenedores se comunican usando esta configuracion automaticamente, lo que simplifica en caso de tener muchos contenedores y hace que el código sea más portable, usar redes definidas por el usuario permite añadir más servicios sin riesgo de colisiones con otros proyectos.
-
-## Referencias
-
-Docker. _Bridge network driver – Differences between user-defined bridges and the default bridge_.  
- En Docker Documentation. Disponible en: [https://docs.docker.com/network/drivers/bridge/](https://docs.docker.com/network/drivers/bridge/)

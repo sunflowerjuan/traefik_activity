@@ -1,5 +1,5 @@
 volumes:
-  neo4j_data:
+  neon-neo4j_data:
 
 networks:
   app_network:
@@ -8,7 +8,7 @@ networks:
 services:
   neon-neo4j:
     image: neo4j:latest
-    container_name: neo4j-db-10
+    container_name: neo4j_db-10
     restart: always
     environment:
       - NEO4J_AUTH=${NEO4J_USERNAME}/${NEO4J_PASSWORD}
@@ -16,13 +16,14 @@ services:
       - "7474:7474"
       - "7687:7687"
     volumes:
-      - neo4j_data:/data
+      - neon-neo4j_data:/data
+      - ./AllMoviesDetails_w.csv:/var/lib/neo4j/import/AllMoviesDetails_w.csv
     networks:
       - app_network
 
   backend:
     build: ./backend
-    container_name: express_backend
+    container_name: backend
     restart: always
     env_file:
       - .env
