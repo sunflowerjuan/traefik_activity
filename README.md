@@ -5,8 +5,10 @@ Query para los datos
 Cargar peliculas
 
 ```neon4j
-LOAD CSV WITH HEADERS FROM 'file:///AllMoviesDetails_fixed.csv' AS row
+LOAD CSV WITH HEADERS FROM 'file:///AllMoviesDetails_w.csv' AS row
 FIELDTERMINATOR ';'
+WITH row
+LIMIT 10000
 CREATE (m:Movie {
   id: toInteger(row.id),
   title: row.title,
@@ -22,6 +24,7 @@ CREATE (m:Movie {
   vote_average: coalesce(toFloat(row.vote_average), 0.0),
   vote_count: coalesce(toInteger(row.vote_count), 0)
 });
+
 ```
 
 crear nodos
