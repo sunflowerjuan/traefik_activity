@@ -74,5 +74,11 @@ services:
       - "traefik.http.routers.backend-v1.rule=Host(`api.localhost`) && PathPrefix(`/v1`)"
       #Create strip middleware to remove /v1 prefix
       - "traefik.http.middlewares.strip-v1.stripprefix.prefixes=/v1"
-      #add middleware to router
+      # add middleware to router
       - "traefik.http.routers.backend-v1.middlewares=strip-v1"
+      # Middleware rateLimit
+      - "traefik.http.middlewares.backend-ratelimit.rateLimit.average=10"
+      - "traefik.http.middlewares.backend-ratelimit.rateLimit.burst=3"
+
+      # Asociamos ambos middlewares al router
+      - "traefik.http.routers.backend.middlewares=backend-ratelimit"
