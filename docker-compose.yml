@@ -56,8 +56,6 @@ services:
 
   backend:
     build: ./backend
-    deploy:
-      replicas: 2
     restart: always
     env_file:
       - .env
@@ -82,3 +80,21 @@ services:
 
       # Asociamos ambos middlewares al router
       - "traefik.http.routers.backend.middlewares=backend-ratelimit"
+      # Middleware de errores
+      - "traefik.http.middlewares.backend-error.errors.status=404,500-599"
+      - "traefik.http.middlewares.backend-error.errors.service=error-pages"
+      - "traefik.http.middlewares.backend-error.errors.query=/{status}.html"
+
+      # Asociar el middleware al router
+      - "traefik.http.routers.backend.middlewares=backend-error"
+  error-pages:
+    image: nginx:alpine
+    container_name: error-pages
+    restart: always
+    volumes:
+      - ./error-pages:/usr/share/nginx/html:ro
+    networks:
+      - app_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.error-pages.loadbalancer.server.port=80"
