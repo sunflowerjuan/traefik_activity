@@ -6,15 +6,48 @@ networks:
     driver: bridge
 
 services:
+  traefik:
+    image: traefik:v3.5
+    container_name: traefik
+    restart: always
+    command:
+      - "--api.dashboard=true"
+      - "--api.insecure=false"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+    labels:
+      # Router para dashboard
+      - "traefik.http.routers.traefik.rule=Host(`ops.localhost`)"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.entrypoints=web"
+
+      #Autenticacion
+      # Declaring the user list
+      #
+      # Note: when used in docker-compose.yml all dollar signs in the hash need to be doubled for escaping.
+      # To create user:password pair, it's possible to use this command:
+      # echo $(htpasswd -nB juan) | sed -e s/\\$/\\$\\$/g
+      #
+      # Also, note that dollar signs should NOT be doubled when not evaluated (e.g. Ansible docker_container module).
+
+      - "traefik.http.middlewares.test-auth.basicauth.users=juan:$$2y$$05$$JVOriU0z8OoTTkfrSS7faOArKRTB.bukD0WRazqrb31Jmi3KAHFju,sunflowers:$$apr1$$d9hr9HBB$$4HxwgUir3HP4EsggP/QNo0"
+
+      # Applying the middleware to the router
+      - "traefik.http.routers.traefik.middlewares=test-auth"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - app_network
+
   neon-neo4j:
     image: neo4j:latest
     container_name: neo4j_db-10
     restart: always
     environment:
       - NEO4J_AUTH=${NEO4J_USERNAME}/${NEO4J_PASSWORD}
-    ports:
-      - "7474:7474"
-      - "7687:7687"
     volumes:
       - neon-neo4j_data:/data
       - ./AllMoviesDetails_w.csv:/var/lib/neo4j/import/AllMoviesDetails_w.csv
@@ -33,3 +66,13 @@ services:
       - neon-neo4j
     networks:
       - app_network
+    labels:
+      - "traefik.enable=true"
+      # Router para http://api.localhost/
+      - "traefik.http.routers.backend.rule=Host(`api.localhost`)"
+        # Router para http://api.localhost/v1
+      - "traefik.http.routers.backend-v1.rule=Host(`api.localhost`) && PathPrefix(`/v1`)"
+      #Create strip middleware to remove /v1 prefix
+      - "traefik.http.middlewares.strip-v1.stripprefix.prefixes=/v1"
+      #add middleware to router
+      - "traefik.http.routers.backend-v1.middlewares=strip-v1"
