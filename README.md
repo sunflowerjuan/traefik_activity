@@ -73,3 +73,48 @@ Configuramos el Midleware con el basic-Auth en nuestro traefik y verificamos que
 
 Ingresamos al dashboard con las credenciales configuradas:
 ![dash](img/dashboard.png)
+
+## Middlewares
+
+- Auth básica para el dashboard (ops.localhost/dashboard/).
+
+  Establecemos el label del Basic Auth para nuestro Traefik con un usuario y clave:
+
+  ```yaml
+  - "traefik.http.middlewares.test-auth.basicauth.users=juan:$$2y$$05$$JVOriU0z8OoTTkfrSS7faOArKRTB.bukD0WRazqrb31Jmi3KAHFju,sunflowers:$$apr1$$d9hr9HBB$$4HxwgUir3HP4EsggP/QNo0"
+  ```
+
+  verificamos que es inaccesible si no ponemos credenciales:
+  ![Unauthorized](img/401.png)
+
+- stripPrefix si usan prefijos tipo /api o /dashboard.
+
+  Para el servicio de backend utilizamos un stripprefix para remover el prefijo "v1" de nuestro [api.localhost](api.localhost) para que no llegue hasta nuestra api sino llegue limpio:
+
+  ```yaml
+  # Router para http://api.localhost/v1
+  - "traefik.http.routers.backend-v1.rule=Host(`api.localhost`) && PathPrefix(`/v1`)"
+  #Create strip middleware to remove /v1 prefix
+  - "traefik.http.middlewares.strip-v1.stripprefix.prefixes=/v1"
+  # add middleware to router
+  - "traefik.http.routers.backend-v1.middlewares=strip-v1"
+  ```
+
+- rateLimit para la API
+
+  Limitamos el backend a un promedio de 10 peticiones/segundo maximo hasta 13 peticiones.
+
+  y probaremos que que la API aplique el limite de peticiones con el siguiente comando:
+
+  ```bash
+  for i in {1..20}
+  do
+  curl http://api.localhost/health
+  done
+  ```
+
+  El cual nos da la siguiente salida:
+
+  ![Rate](img/rate-Limit.png)
+
+## Balanceo (réplicas de la API)
