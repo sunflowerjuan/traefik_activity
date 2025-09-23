@@ -29,16 +29,16 @@ app.get("/movies", async (req, res) => {
       { skip: neo4j.int(skip), limit: neo4j.int(limit) }
     );
 
-    const movies = result.records.map(record => ({
+    const movies = result.records.map((record) => ({
       title: record.get("title"),
-      language: record.get("language")
+      language: record.get("language"),
     }));
 
     res.json({
       page,
       limit,
       results: movies.length,
-      movies
+      movies,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -63,11 +63,13 @@ app.post("/movies", async (req, res) => {
     revenue,
     popularity,
     vote_average,
-    vote_count
+    vote_count,
   } = req.body;
 
   if (!title || !id) {
-    return res.status(400).json({ error: "Los campos 'id' y 'title' son obligatorios" });
+    return res
+      .status(400)
+      .json({ error: "Los campos 'id' y 'title' son obligatorios" });
   }
 
   try {
@@ -101,7 +103,7 @@ app.post("/movies", async (req, res) => {
         revenue: revenue ? neo4j.int(revenue) : 0,
         popularity,
         vote_average,
-        vote_count: vote_count ? neo4j.int(vote_count) : 0
+        vote_count: vote_count ? neo4j.int(vote_count) : 0,
       }
     );
 
@@ -109,13 +111,17 @@ app.post("/movies", async (req, res) => {
 
     res.status(201).json({
       message: "Movie creada exitosamente",
-      movie: createdMovie
+      movie: createdMovie,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
   } finally {
     await session.close();
   }
+});
+
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
 });
 
 // Start Server
