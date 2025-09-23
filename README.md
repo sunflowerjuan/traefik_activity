@@ -119,7 +119,7 @@ Ingresamos al dashboard con las credenciales configuradas:
 
 ## Balanceo (réplicas de la API)
 
-Levantamos dos instancias de nuestra API y con el endpoint /whoami que hemos creado verificaremos el hostname en nuestras peticiones:
+Levantamos dos instancias de nuestra API especificandolo en el docker-compose y con el endpoint /whoami que hemos creado verificaremos el hostname en nuestras peticiones:
 
 ```bash
 for i in {1..14}
@@ -134,3 +134,97 @@ tenemos la siguiente salida:
 ![Whoami](img/whoami.png)
 
 ## Descubrimiento automático
+
+Escalamos nuestra API utilizando:
+
+```bash
+docker compose up -d --scale backend=2
+```
+
+![scale](img/scale.png)
+
+En el dashboard, dentro de Services, se visualiza el load balancer con 2
+servidores registrados:
+
+![two](img/2-servers.png)
+
+## Observabilidad y pruebas
+
+- Endpoint /health en la API (200 OK).
+  ![200-ok](img/200-6.png)
+
+- Probar:
+  - listar
+    Se utilizara la siguiente peticion GET para listar nuestras peliculas
+    ```bash
+    curl -X GET http://api.localhost/movies
+    ```
+    ![GET](img/GET.png)
+  - crear en su API.
+    Se utilizara la siguiente peticion POST para crear una pelicula
+    ```bash
+    curl -X POST http://api.localhost/movies \
+    -H "Content-Type: application/json" \
+    -d '{
+      "id": 99999,
+      "title": "The Montecarlo Experiment",
+      "original_title": "The Montecarlo Experiment",
+      "overview": "Un experimento que sale mal.",
+      "original_language": "en",
+      "release_date": "15/09/2025",
+      "runtime": 120,
+      "status": "Released",
+      "budget": 1000000,
+      "revenue": 5000000,
+      "popularity": 12.34,
+      "vote_average": 8.7,
+      "vote_count": 1500
+    }'
+    ```
+    ![POST](img/POST.png)
+- Comprobar en el dashboard:
+
+  - Routers
+    ![ROUTERS](img/routers.png)
+
+  - Services
+    ![ROUTERS](img/service.png)
+
+  - Middlewares activos
+    ![midle](img/midlewares.png)`
+
+## Diagrama simple de la solucion
+
+Tenemos el siguiente diagrama de la solucion:
+![diagrama](img/diagrama.png)`
+
+En donde nuestro cliente accede desde el entrypoint que es el puerto 80 gestionado por tarefik el cual lo enruta mediante `api.localhost` o `api.localhost/v1` que nos redirigira a una de nuestras dos instancias del backend distribuyendo la carga y finalmente este backend accede a nuestra base de datos de neo4j segun la peticion que hayamos realizado.
+
+## Breve reflexion Tecnica
+
+- ¿Qué aporta Traefik frente a mapear puertos directamente?
+
+  Traefik aporta ventajas frente a mapear puertos directamente porque centraliza el acceso a los servicios. En lugar de depender de puertos distintos para cada contenedor, puedo usar dominios o rutas limpias y fáciles de recordar que traefik gestiona de manera automatica. Además, Traefik permite balancear automáticamente las réplicas y descubrir nuevos servicios sin necesidad de reiniciar nada, lo que hace más sencilla la administración.
+
+- ¿Qué middlewares usarían en producción y por qué?
+
+  En producción considero útiles la autenticación básica, que es importante para proteger servicios internos, y el rate limiting ayuda a controlar la cantidad de peticiones y evitar ataques como DDOS.
+
+- Riesgos de dejar el dashboard “abierto” y cómo mitigarlos.
+
+  Dejar el dashboard abierto representa un riesgo porque muestra información sensible de la infraestructura. Esto podría ser aprovechado para ataques o accesos indebidos. Para mitigarlo lo mejor es restringir el acceso a redes internas y además habilitar autenticación, asegurando que solo personas autorizadas puedan entrar.
+
+## Midleware Errors
+
+Utilizaremos Nginx para redirigir a nuestras paginas de error que hemos creado.
+
+Crearemos un bind mount `- ./error-pages:/usr/share/nginx/html:ro` con la carpeta que contiene nuestros html [404.html](error-pages/404.html) y [500.html](error-pages/404.html), luegro creamos un midleware de tipo error, y los codigos que debe interceptar. el exacto 404 y cualquier código entre 500 y 599. Si el backend responde con alguno de esos códigos, Traefik activará el middleware.
+
+si intentamos hacer una peticion a `http//api.localhost/hola` que es una ruta que no existe. tenemos loa siguiente salida:
+
+![404-b](img/beauty-404.png)
+
+Luego para replicar el error 500, bajaremos el contenedor de la base de datos neo4j y luego intentaremos hacer nuestra peticion `/movies`
+Tenemos la siguiente salida:
+
+![500](img/500.png)
