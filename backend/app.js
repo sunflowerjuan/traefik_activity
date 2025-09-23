@@ -1,5 +1,6 @@
 require("dotenv").config();
 
+const os = require("os");
 const express = require("express");
 const neo4j = require("neo4j-driver");
 
@@ -122,6 +123,12 @@ app.post("/movies", async (req, res) => {
 
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });
+});
+
+app.get("/whoami", (req, res) => {
+  res.json({
+    hostname: os.hostname(),
+  });
 });
 
 // Start Server
