@@ -118,3 +118,19 @@ Ingresamos al dashboard con las credenciales configuradas:
   ![Rate](img/rate-Limit.png)
 
 ## Balanceo (réplicas de la API)
+
+Levantamos dos instancias de nuestra API y con el endpoint /whoami que hemos creado verificaremos el hostname en nuestras peticiones:
+
+```bash
+for i in {1..14}
+do
+curl http://api.localhost/whoami
+echo "\n"
+done
+```
+
+tenemos la siguiente salida:
+
+![Whoami](img/whoami.png)
+
+## Descubrimiento automático
