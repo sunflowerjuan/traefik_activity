@@ -56,18 +56,18 @@ services:
 
   backend:
     build: ./backend
-    container_name: backend
+    deploy:
+      replicas: 2
     restart: always
     env_file:
       - .env
-    ports:
-      - "${EXPRESS_PORT}:3000"
     depends_on:
       - neon-neo4j
     networks:
       - app_network
     labels:
       - "traefik.enable=true"
+      - "traefik.http.services.backend.loadbalancer.server.port=3000"
       # Router para http://api.localhost/
       - "traefik.http.routers.backend.rule=Host(`api.localhost`)"
         # Router para http://api.localhost/v1
