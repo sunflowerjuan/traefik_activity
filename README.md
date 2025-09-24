@@ -193,6 +193,13 @@ servidores registrados:
   - Middlewares activos
     ![midle](img/midlewares.png)`
 
+### Host Usados:
+
+Para el ejercicio se utilizaron los siguientes host:
+
+- `api.localhost` para acceder a nuestro servicio de la API
+- `ops.localhost` para acceder al dashboard de traefik unicamente desde este sitio
+
 ## Diagrama simple de la solucion
 
 Tenemos el siguiente diagrama de la solucion:
